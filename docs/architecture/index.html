@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ccwork 아키텍처 다이어그램</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f7f7f8;
+        --card-bg: #ffffff;
+        --border: #e2e2e6;
+        --text: #1a1a1f;
+        --muted: #666a73;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #16171b;
+          --card-bg: #1f2025;
+          --border: #33343a;
+          --text: #eceef1;
+          --muted: #9a9ea8;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family:
+          'Pretendard Variable',
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        padding: 2rem 1.5rem 4rem;
+      }
+      header {
+        max-width: 1100px;
+        margin: 0 auto 2rem;
+      }
+      h1 {
+        font-size: 1.6rem;
+        margin: 0 0 0.4rem;
+      }
+      header p {
+        color: var(--muted);
+        margin: 0;
+        font-size: 0.95rem;
+      }
+      main {
+        max-width: 1100px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+      }
+      section {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1.5rem;
+      }
+      section h2 {
+        font-size: 1.15rem;
+        margin: 0 0 0.3rem;
+      }
+      section p.desc {
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin: 0 0 1rem;
+      }
+      .diagram-wrap {
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+      }
+      .mermaid {
+        display: flex;
+        justify-content: center;
+      }
+      footer {
+        max-width: 1100px;
+        margin: 2rem auto 0;
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>ccwork (Notes App) 아키텍처</h1>
+      <p>src/ 디렉토리 분석 기반 컴포넌트 의존성 및 상태 흐름 다이어그램</p>
+    </header>
+
+    <main>
+      <section>
+        <h2>1. 컴포넌트 의존성 그래프</h2>
+        <p class="desc">
+          각 파일의 import 관계를 그대로 표현. Entry → Components → State(Context) → API →
+          Types 순으로 계층을 구분했다.
+        </p>
+        <div class="diagram-wrap">
+          <pre class="mermaid">
+flowchart TD
+  subgraph Entry["진입점"]
+    main["main.tsx"]
+  end
+
+  subgraph Components["컴포넌트 (src/components, App.tsx)"]
+    App["App.tsx"]
+    Layout["Layout.tsx"]
+    NoteList["NoteList.tsx"]
+    NoteEditor["NoteEditor.tsx"]
+    NoteItem["NoteItem.tsx"]
+  end
+
+  subgraph State["전역 상태 (src/context)"]
+    NotesContext["NotesContext.tsx
+NotesProvider / useNotes()"]
+  end
+
+  subgraph API["API 계층 (src/api)"]
+    NotesApi["notes.ts
+fetchNotes / createNote / updateNote / deleteNote"]
+  end
+
+  subgraph Types["타입 (src/types)"]
+    NoteType["note.ts
+Note"]
+  end
+
+  main --> App
+  App --> Layout
+  App --> NoteList
+  App --> NoteEditor
+  App -. "NotesProvider로 감쌈" .-> NotesContext
+  NoteList --> NoteItem
+  NoteList -- "useNotes()" --> NotesContext
+  NoteEditor -- "useNotes()" --> NotesContext
+  NotesContext --> NotesApi
+  NotesContext --> NoteType
+  NotesApi --> NoteType
+  NoteItem --> NoteType
+
+  classDef entry fill:#dbeafe,stroke:#3b82f6,color:#1e3a8a;
+  classDef comp fill:#dcfce7,stroke:#22c55e,color:#14532d;
+  classDef state fill:#fef3c7,stroke:#f59e0b,color:#78350f;
+  classDef api fill:#fee2e2,stroke:#ef4444,color:#7f1d1d;
+  classDef types fill:#ede9fe,stroke:#8b5cf6,color:#4c1d95;
+
+  class main entry;
+  class App,Layout,NoteList,NoteEditor,NoteItem comp;
+  class NotesContext state;
+  class NotesApi api;
+  class NoteType types;
+          </pre>
+        </div>
+      </section>
+
+      <section>
+        <h2>2. 상태 흐름 — 초기 로딩 &amp; 삭제</h2>
+        <p class="desc">
+          <code>NotesProvider</code> 마운트 시 데이터 로딩과, 목록에서 삭제를 눌렀을 때의 상태
+          갱신 경로.
+        </p>
+        <div class="diagram-wrap">
+          <pre class="mermaid">
+flowchart LR
+  A["NotesProvider mount<br/>useEffect"] --> B["api.fetchNotes()"]
+  B --> C[("json-server<br/>GET /notes")]
+  C --> D["setNotes(data)<br/>setLoading(false)"]
+  D --> E["NoteList<br/>notes 렌더"]
+  D --> F["NoteEditor<br/>notes에서 selectedNote 탐색"]
+
+  G["NoteList<br/>삭제 버튼 클릭"] --> H["deleteNote(id)"]
+  H --> I["api.deleteNote(id)"]
+  I --> C2[("json-server<br/>DELETE /notes/:id")]
+  H --> J["setNotes(prev ⇒ filter)"]
+  J --> E
+
+  classDef ctx fill:#fef3c7,stroke:#f59e0b,color:#78350f;
+  classDef api fill:#fee2e2,stroke:#ef4444,color:#7f1d1d;
+  classDef comp fill:#dcfce7,stroke:#22c55e,color:#14532d;
+  classDef server fill:#e0e7ff,stroke:#6366f1,color:#312e81;
+
+  class A,D,H,J ctx;
+  class B,I api;
+  class E,F,G comp;
+  class C,C2 server;
+          </pre>
+        </div>
+      </section>
+
+      <section>
+        <h2>3. 상태 흐름 — 노트 생성 / 수정 (저장 버튼)</h2>
+        <p class="desc">
+          <code>NoteEditor</code>의 저장 버튼 클릭부터 서버 응답 후 리렌더까지의 왕복 흐름.
+          생성/수정 모두 API 응답을 기다린 뒤에만 로컬 상태를 갱신한다(낙관적 업데이트 없음).
+        </p>
+        <div class="diagram-wrap">
+          <pre class="mermaid">
+sequenceDiagram
+  participant User as 사용자
+  participant Editor as NoteEditor
+  participant Ctx as NotesContext (useNotes)
+  participant Api as api/notes.ts
+  participant Server as json-server
+
+  User->>Editor: 저장 버튼 클릭 (handleSave)
+  alt 새 노트 생성 (isCreating)
+    Editor->>Ctx: createNote(title, content)
+    Ctx->>Api: api.createNote({ title, content })
+  else 기존 노트 수정
+    Editor->>Ctx: updateNote(id, { title, content })
+    Ctx->>Api: api.updateNote(id, updates)
+  end
+  Api->>Server: fetch POST/PATCH /notes
+  Server-->>Api: 저장된 Note (createdAt/updatedAt 포함)
+  Api-->>Ctx: Promise&lt;Note&gt; resolve
+  Ctx->>Ctx: setNotes(prev ⇒ 추가 또는 교체)
+  Ctx-->>Editor: notes 갱신 → 리렌더
+  Editor-->>User: onDone() 호출
+
+  Note over Editor,Api: 실패 시 catch(e) => console.error(e)만 수행 (alert 없음)
+          </pre>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      src/ 디렉토리 정적 분석 기반으로 생성됨 · Mermaid.js로 렌더링
+    </footer>
+
+    <script>
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default',
+        securityLevel: 'loose',
+      });
+    </script>
+  </body>
+</html>

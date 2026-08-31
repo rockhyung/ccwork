@@ -27,3 +27,6 @@ dist-ssr/
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code (개인 로컬 설정)
+.claude/settings.local.json

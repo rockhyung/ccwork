@@ -90,3 +90,8 @@ App.tsx (선택된 노트 id, 생성 모드 로컬 state)
 - 세미콜론 사용, 싱글쿼트, 2칸 들여쓰기, trailing comma(`all`), printWidth 100
 - 컴포넌트는 `export function ComponentName(...)` 형태의 named export (default export는 `App`에서만 사용)
 - 한글 주석으로 섹션 구분(`{/* 헤더 */}`, `// 선택된 노트가 바뀔 때 폼 동기화` 등) — 기존 관례를 따를 것
+
+## 커밋 규칙 (husky)
+
+- `.husky/pre-commit`: `lint-staged` 실행 — staged된 `*.ts`/`*.tsx`는 `eslint --fix` + `prettier --write`, `*.json`/`*.css`/`*.md`는 `prettier --write`. 에러가 남으면 커밋이 막힌다.
+- `.husky/commit-msg`: `commitlint`(`@commitlint/config-conventional`)로 커밋 메시지 형식을 검사 — `type: subject` 형식 필수(`feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `style` 등). 제목/본문은 한글로 작성(`subject-case` 규칙은 비활성화되어 있어 한글 대소문자 검사는 하지 않음).
